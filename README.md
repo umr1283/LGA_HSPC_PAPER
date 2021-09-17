@@ -9,15 +9,15 @@ Scripts were executed using the following Docker images stored on Docker Hub:
 Data sharing statement: see manuscript.
 
 ## Extreme fetal growth is associated with hypermethylation of key genes regulating hematopoietic homeostasis 
-
+see scripts 01-lga_vs_ctrl_limma_DMCs_analysis.R to 03B-motif_analysis.R
 
 ## Epigenetic programming impacts hematopoietic stem cell response to stimulation at transcriptomic level
-
+see scripts 05-lga_vs_ctrl_limma_DMCs_analysis.R to 09-LGA_vs_Ctrl_Activated.R
 
 ## Epigenetic programming affects key regulons essential to HSCs self-renewal and differentiation
-
+see scripts 10-SCENIC.R to 11-regulons_enrichment_genescore.R and 13-GRN_integr.R
 
 ## Epigenetic programming is associated with a shift in differentiation process
-
+see scripts 12A-Pseudotime_integrated.R
 
 ## Epigenetic programming is associated with alteration of the hematopoietic compartment function and integrity
