@@ -23,5 +23,5 @@ see scripts 12-Pseudotime_integrated.R
 ## Epigenetic programming is associated with alteration of the hematopoietic compartment function and integrity
 see scripts 14-figures_Paper_LGA_HSPC.R
 
-##Figures and statistical tests
+## Figures and statistical tests
 see scripts 14-figures_Paper_LGA_HSPC.R
