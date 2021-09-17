@@ -1,5 +1,5 @@
 # LGA_HSPC_PAPER
-This repository contains all scripts used to perform the analyses described in the manuscript entitled: "Excessive fetal growth affects HSC homeostasis through epigenetic programming of EGR1 transcriptional network" from Pelletier et al., 2021.
+This repository contains all scripts used to perform the analyses described in the manuscript entitled: "__Excessive fetal growth affects HSC homeostasis through epigenetic programming of EGR1 transcriptional network__" from Pelletier _et al._, 2021.
 
 Scripts were executed using the following Docker images stored on Docker Hub:
 
