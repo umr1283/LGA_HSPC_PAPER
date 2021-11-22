@@ -20,7 +20,7 @@ See scripts:
 
 ## Epigenetic programming impacts hematopoietic stem cell response to stimulation at transcriptomic level
 See scripts:
-  1. [05-lga_vs_ctrl_limma_DMCs_analysis.R](scripts/05-lga_vs_ctrl_limma_DMCs_analysis.R)
+  1. [05-make_hematomap.R](scripts/05-make_hematomap.R)
   2. [06-integr_singlecell_cbps.R](scripts/06-integr_singlecell_cbps.R)
   3. [07-LGA_vs_Ctrl_Basal.R](scripts/07-LGA_vs_Ctrl_Basal.R)
   4. [08-HTO_signature.R](scripts/08-HTO_signature.R)
