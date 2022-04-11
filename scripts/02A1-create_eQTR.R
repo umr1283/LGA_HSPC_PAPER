@@ -287,8 +287,8 @@ eqtls_meta[,pval_link:=PVALUE_FE]
 eqtls_meta[minLocal==T,avg.mlog10pval:=mean(-log10(pval_link)),by=c("gene","eQTR")]
 eqtls_meta[!is.na(gene),eqtr_id:=paste(gene,eQTR,sep="-")]
 summary(eqtls_meta[minLocal==T]$avg.mlog10pval)
-   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-  29.00   45.80   62.33   70.31   88.81  191.19 
+  #  Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  # 29.00   45.80   62.33   70.31   88.81  191.19 
 
 eqtls_meta[,length.eqtr:=end.eQTR-start.eQTR]
 summary(unique(eqtls_meta[minLocal==T])$length.eqtr)
