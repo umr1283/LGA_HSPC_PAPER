@@ -2,7 +2,7 @@
 
 [![DOI](https://zenodo.org/badge/404302229.svg)](https://zenodo.org/badge/latestdoi/404302229)
 
-This repository contains all scripts used to perform the analyses described in the manuscript entitled: "_**Excessive fetal growth affects HSC homeostasis through epigenetic programming of EGR1 transcriptional network**_" from Pelletier _et al._, 2021.
+This repository contains all scripts used to perform the analyses described in the manuscript entitled: "_**Early epigenetic influence on EGR1, KLF2 and KLF4 transcriptional network associates with alteration of HSCs quiescence**_" from Pelletier _et al._, 2021.
 
 Scripts were executed using the following Docker images stored on Docker Hub:
 
@@ -11,35 +11,39 @@ Scripts were executed using the following Docker images stored on Docker Hub:
 
 Data sharing statement: see manuscript.
 
-## Extreme fetal growth is associated with hypermethylation of key genes regulating hematopoietic homeostasis 
+## Optimized methylation gene set analysis reveals association between LGA DNA hypermethylation and stem cell differentiation pathways
 See scripts: 
   1. [01-lga_vs_ctrl_limma_DMCs_analysis.R](scripts/01-lga_vs_ctrl_limma_DMCs_analysis.R)
   2. [02-gene_score_calculation_and_validation.R](scripts/02-gene_score_calculation_and_validation.R)
   3. [03-pathway_analysis.R](scripts/03-pathway_analysis.R)
-  4. [04-motif_analysis.R](scripts/04-motif_analysis.R)
 
-## Epigenetic programming impacts hematopoietic stem cell response to stimulation at transcriptomic level
+## Single-cell transcriptomic analysis confirms alteration of hyper-methylated genes in pathways regulating stem cell differentiation among LGA HSCs
 See scripts:
-  1. [05-make_hematomap.R](scripts/05-make_hematomap.R)
-  2. [06-integr_singlecell_cbps.R](scripts/06-integr_singlecell_cbps.R)
-  3. [07-LGA_vs_Ctrl_Basal.R](scripts/07-LGA_vs_Ctrl_Basal.R)
-  4. [08-HTO_signature.R](scripts/08-HTO_signature.R)
-  9. [09-LGA_vs_Ctrl_Activated.R](scripts/09-LGA_vs_Ctrl_Activated.R)
+  1. [04-make_hematomap.R](scripts/04-make_hematomap.R)
+  2. [05-integr_singlecell_cbps.R](scripts/05-integr_singlecell_cbps.R)
+  3. [06-LGA_vs_Ctrl_RNA.R](scripts/06-LGA_vs_Ctrl_RNA.R)
+ 
+ ## HSC specific open chromatin regions associates DNA methylation changes and link to DEGs
+ See scripts:
+  1. [07-DMCs_ATAC_integr.R](scripts/07-DMCs_ATAC_integr.R)
+  2. [08-chromatin_change_LGA_vs_Ctrl.R](scripts/08-chromatin_change_LGA_vs_Ctrl.R)
 
-## Epigenetic programming affects key regulons essential to HSCs self-renewal and differentiation
+## EGR1, KLF2 and KLF4 are key upstream regulators influenced by early epigenetic programming in LGA
 See scripts:
-  1. [10-SCENIC.R](scripts/10-SCENIC.R)
-  2. [11-regulons_enrichment_genescore.R](scripts/11-regulons_enrichment_genescore.R)
-  3. [13-GRN_integr.R](scripts/13-GRN_integr.R)
+  1. [09-SCENIC.R](scripts/09-SCENIC.R)
+  2. [10-regulons_enrichment_genescore.R](scripts/10-regulons_enrichment_genescore.R)
+  3. [10A-motif_analysis.R](scripts/10A-motif_analysis.R)
 
-## Epigenetic programming is associated with a shift in differentiation process
+## Multimodal co-regulatory network recapitulating TF-gene interactions influenced by early epigenetic programming in LGA
 See scripts:
-  1. [12-Pseudotime_integrated.R](scripts/12-Pseudotime_integrated.R)
+  1. [11-GRN_regulons.R](scripts/11-GRN_regulons.R)
+  2. [12-GRN_final.R](scripts/12-GRN_final.R)
 
-## Epigenetic programming is associated with alteration of the hematopoietic compartment function and integrity
+## In vitro analysis confirms the alteration of HSPCs differentiation capacities in LGA
 See scripts:
-  1. [14-figures_Paper_LGA_HSPC.R](scripts/14-figures_Paper_LGA_HSPC.R)
+  1. [13-Pseudotime.R](scripts/13-Pseudotime.R)
+  2. [14-figures_epi_response.R](scripts/14-figures_epi_response.R)
 
 ## Figures and statistical tests
 See scripts:
-  1. [14-figures_Paper_LGA_HSPC.R](scripts/14-figures_Paper_LGA_HSPC.R)
+  1. [14-figures_epi_response.R](scripts/14-figures_epi_response.R)
