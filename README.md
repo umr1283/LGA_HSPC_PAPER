@@ -20,7 +20,7 @@ Analyses:
   1. [04-make_hematomap.R](scripts/04-make_hematomap.R)
   2. [05-integr_singlecell_cbps.R](scripts/05-integr_singlecell_cbps.R)
   3. [06-LGA_vs_Ctrl_RNA.R](scripts/06-LGA_vs_Ctrl_RNA.R)
-- HSC specific open chromatin regions associates DNA methylation changes and link to DEGs
+- DNA methylation changes occurs in HSCs and DEGs associated open chromatin regions
   1. [07-DMCs_ATAC_integr.R](scripts/07-DMCs_ATAC_integr.R)
   2. [08-chromatin_change_LGA_vs_Ctrl.R](scripts/08-chromatin_change_LGA_vs_Ctrl.R)
 - EGR1, KLF2 and KLF4 are key upstream regulators influenced by early epigenetic programming in LGA
