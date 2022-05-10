@@ -1,7 +1,6 @@
 ### Project Setup ==================================================================================
 library(here)
-out<- here("outputs", "12A-Pseudotime_integrated")
-dir.create(out, recursive = TRUE, showWarnings = FALSE, mode = "0775")
+out<- here("outputs", "13-Pseudotime")
 
 
 ### Load Packages ==================================================================================
@@ -49,7 +48,7 @@ get_earliest_principal_node <- function(cbp.cds, time_bin="LT-HSC"){
 
 ### Analysis =======================================================================================
 
-cbps<-readRDS("outputs/10A-classical_integr/cbps0-8_clean.rds")
+cbps<-readRDS("outputs/09A-classical_integr/cbps0-8_clean.rds")
 DefaultAssay(cbps) <- "integrated"
 Idents(cbps) <- "cell_type_hmap"
 cbps <- RunPCA(cbps,reduction.name = "integrated.pca",features = VariableFeatures(cbps))

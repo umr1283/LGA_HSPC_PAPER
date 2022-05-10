@@ -1,11 +1,11 @@
-out<-'outputs/15-chromatin_change_LGA_vs_Ctrl/'
+out<-'outputs/08-chromatin_change_LGA_vs_Ctrl/'
 
 source("scripts/utils/new_utils.R")
 library(Seurat)
 library(Signac)
 
-atacs<-readRDS("outputs/14-DMCs_atac_integr/cbps_atacs.rds")
-atacs[["lin_peaks"]]<-readRDS("outputs/14-DMCs_atac_integr/cbps_lin_spe_peaks_assay.rds")
+atacs<-readRDS("outputs/7-DMCs_atac_integr/cbps_atacs.rds")
+atacs[["lin_peaks"]]<-readRDS("outputs/7-DMCs_atac_integr/cbps_lin_spe_peaks_assay.rds")
 DefaultAssay(atacs)<-"lin_peaks"
 Idents(atacs)<-"predicted.id"
 atacs$group<-ifelse(str_detect(atacs$dataset,"1|3"),"ctrl","lga")

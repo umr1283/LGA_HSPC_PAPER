@@ -1,6 +1,6 @@
 ### Project Setup ==================================================================================
 library(here)
-out <- here("outputs", "13-GRN_integr")
+out <- here("outputs", "11-GRN_regulons")
 dir.create(out, recursive = TRUE, showWarnings = FALSE, mode = "0775")
 
 
@@ -18,7 +18,7 @@ theme_set(theme_light())
 
 
 ### Analysis =======================================================================================
-regulons_list<-readRDS("../singlecell/outputs/05-SCENIC/cbps0-8_clean/regulons_list.rds")
+regulons_list<-readRDS("outputs/09-SCENIC/cbps_14k/regulons_list.rds")
 
 #make a df of interactions tf > targets
 regulons<-Reduce(rbind,lapply(names(regulons_list), function(t)data.table(tf=rep(t,length(regulons_list[[t]])),target=regulons_list[[t]])))

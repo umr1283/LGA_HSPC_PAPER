@@ -2,34 +2,46 @@ source("../methyl/scripts/utils/new_utils.R")
 library(Seurat)
 options(future.globals.maxSize = 50000 * 1024^2)
 sample_name<-"hematomap_ctrls_sans_stress"
-out<-"outputs/05-make_hematomap/"
+out<-"outputs/04-make_hematomap/"
 dir.create(out)
 
-hmap_list<-list(ctrl0=readRDS("../singlecell/outputs/01-Analyses_Individuelles/CD34_CTRL_CBP547/2020-05-28_seurat_obj2_final.rds"),
-              ctrlF544=subset(readRDS("../singlecell/outputs/01-Analyses_Individuelles/CBP6-a/cbp6a.rds"),sample=="ctrlF544"),
-              ctrlF545=subset(readRDS("../singlecell/outputs/01-Analyses_Individuelles/CBP6-b/cbp6b.rds"),sample=="ctrlF545"),
-              ctrlF541=subset(readRDS("../singlecell/outputs/01-Analyses_Individuelles/CBP6-c/cbp6c.rds"),sample=="ctrlF541"),
-              ctrlhmap55=subset(readRDS("../singlecell/outputs/01-Analyses_Individuelles/cbp7a/cbp7a_singlet.rds"),sample=="ctrlhmap55"),
-              ctrlhmap18=subset(readRDS("../singlecell/outputs/01-Analyses_Individuelles/cbp7b/cbp7b_singlet.rds"),sample=="ctrlhmap18"),
-              ctrlhmap37=readRDS("../singlecell/outputs/01-Analyses_Individuelles/cbp7c/cbp7c_singlet.rds")
-              )
+#first, need preprocess independently the 7 CBPs CTRL datasets
+#run 04A files
+
+hmap_list<-list(ctrlF547=readRDS(fp(out,"ctrlF547.rds"),
+              ctrlF544=readRDS(fp(out,"ctrlF544.rds")),
+              ctrlF545=readRDS(fp(out,"ctrlF545.rds")),
+              ctrlF541=readRDS(fp(out,"ctrlF541.rds")),
+              ctrlM555=readRDS(fp(out,"ctrlM555.rds")),
+              ctrlM518=readRDS(fp(out,"ctrlM518.rds")),
+              ctrlM537=readRDS(fp(out,"ctrlM537.rds")),
+              ))
+
 
 lapply(hmap_list, function(x)head(x@meta.data))
+hmap_list<-lapply(hmap_list, SCTransform,
+                  return.only.var.genes=F, 
+                  method = "glmGamPoi")
+
 hmap_list<-lapply(hmap_list,function(x){
+  x <- CellCycleScoring(x,s.features = cc.genes$s.genes,
+                                 g2m.features = cc.genes$g2m.genes,
+                                 set.ident = TRUE,
+                                 search=TRUE)
   x$CC.Difference <- x$S.Score - x$G2M.Score
   return(x)
   })
 
 # renv::install("bioc::glmGamPoi")
-cbps_list<-lapply(cbps_list, SCTransform,vars.to.regress=c("percent.mt","CC.Difference"),
+hmap_list<-lapply(hmap_list, SCTransform,vars.to.regress=c("percent.mt","CC.Difference"),
                   return.only.var.genes=F, 
                   method = "glmGamPoi")
 
-features <- SelectIntegrationFeatures(object.list = cbps_list, nfeatures = 3000)
+features <- SelectIntegrationFeatures(object.list = hmap_list, nfeatures = 3000)
 length(features)
-cbps_list <- PrepSCTIntegration(object.list = cbps_list, anchor.features = features)
-cbps_list <- lapply(X = cbps_list, FUN = RunPCA, features = features)
-hmap.anchors <- FindIntegrationAnchors(object.list = cbps_list, normalization.method = "SCT", 
+hmap_list <- PrepSCTIntegration(object.list = hmap_list, anchor.features = features)
+hmap_list <- lapply(X = hmap_list, FUN = RunPCA, features = features)
+hmap.anchors <- FindIntegrationAnchors(object.list = hmap_list, normalization.method = "SCT", 
     anchor.features = features, dims = 1:50, reduction = "rpca", k.anchor = 20)
 hmap <- IntegrateData(anchorset = hmap.anchors, normalization.method = "SCT", dims = 1:50)
 hmap <- RunPCA(hmap, verbose = FALSE)
@@ -196,7 +208,7 @@ saveRDS(hmap,fp(out,paste0(sample_name,".rds")))
 # store this information in the spca.annoy.neighbors object within the reference Seurat object
 #and also cache the annoy index data structure (via cache.index = TRUE)
 
-hmap<-readRDS("outputs/05-make_hematomap/hematomap_ctrls_sans_stress.rds")
+hmap<-readRDS("outputs/04-make_hematomap/hematomap_ctrls_sans_stress.rds")
 hmap
 DefaultAssay(hmap)<-"integrated"
 

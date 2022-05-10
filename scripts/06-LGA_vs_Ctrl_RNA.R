@@ -3,9 +3,9 @@ library(Matrix)
 library(Matrix.utils)
 library(DESeq2)
 source("scripts/utils/new_utils.R")
-out<-"outputs/09-LGA_vs_Ctrl_Activated"
+out<-"outputs/06-LGA_vs_Ctrl_RNA"
 dir.create(out)
-cbps<-readRDS("outputs/06-integr_singlecell_cbps/cbps_filtered.rds")
+cbps<-readRDS("outputs/05-integr_singlecell_cbps/cbps_filtered.rds")
 
 cbps_h<-subset(cbps,hto==T)
 

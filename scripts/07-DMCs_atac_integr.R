@@ -1,334 +1,15 @@
 #hypermeth on OCR regulating EGR1 network ?
-out<-'outputs/14-DMCs_atac_integr'
+out<-'outputs/7-DMCs_atac_integr'
 dir.create(out)
 source("scripts/utils/new_utils.R")
 library(Seurat)
 #renv::install("Signac")
 library(Signac)
 
-#I) BULK OCRs####
-#1)DMCs overlap in OCR ?
-atacs<-readRDS("../atac/outputs/cbps_merged/cbps_atac1-4_merged_qc.rds")
-nrow(atacs) #126925
-ocrs<-data.table(peaks=rownames(atacs))
-ocrs[,chr:=str_extract(peaks,"chr[0-9XY]+"),]
-ocrs[,start:=strsplit(peaks,"-")[[1]][2],by="peaks"]
-ocrs[,end:=strsplit(peaks,"-")[[1]][3],by="peaks"]
+#1) scATACseq datasets Preprocessing####
+#run 7A-merge_cbps_atac1-4
 
-#QC peaks :
-#ChromHMM anno dans peaks ?
-chrine_feat<-fread("ref/Chromatin_Annot/CBP/CD34_all_chromatin_feature.csv")
-#trans in hg38
-chrine38<-hg19to38(chrine_feat[,.(chr,start,end,chrReg)][order(chr,start)])
-chrine38[,chrReg:=id]
-chrine38<-merge(chrine38[,-"id"],chrine_feat[,.(chrReg,type)],by="chrReg")
-chrine38[is.na(start)] #ok
-fwrite(chrine38,fp(out,"CD34_all_chromatin_feature_hg38.cs.gz"))
-
-
-peaks_chrine<-bed_inter(a=ocrs[,.(chr,start,end,peaks)][order(chr,start)],
-          b=chrine38[,.(chr,start,end,type)][order(chr,start)],
-          select = c(1,2,3,4,6,7,8),col.names = c("chr","start.ocrs","end.ocrs","peaks","start.chrine","end.chrine","chrine_feat"))
-peaks_chrine[,size_overlap:=min(c(end.ocrs,end.chrine))-max(c(start.ocrs,start.chrine)),by=.(peaks,chrine_feat)]
-
-peaks_chrine[,bigger.overlap:=size_overlap==max(size_overlap),by="peaks"]
-fwrite(peaks_chrine,fp(out,"peaks_chrine_feature_anno.csv.gz"))
-peaks_chrine[,chrine_feat:=as.factor(chrine_feat)]
-p1<-ggplot(peaks_chrine[bigger.overlap==T])+geom_bar(aes(x=chrine_feat,fill=chrine_feat))+ggtitle("Peaks-overlapping chromHMM regions")
-chrine_feat[,type:=as.factor(type)]
-chrine_feat[,chrine_feat:=type]
-p2<-ggplot(chrine_feat)+geom_bar(aes(x=chrine_feat,fill=chrine_feat))+ggtitle("All chromHMM Regions")
-p2+p1+plot_layout(guides = "collect")
-
-
-#peaks overlap with cpgs
-res_meth<-fread("outputs/01-lga_vs_ctrl_limma_DMCs_analysis/res_limma.tsv.gz")
-cpgs<-fread("ref/all_HELP_tagging_cpgs_hg19_pos.csv")
-cpgs[is.na(chr)]
-#need trans in hg38 pos
-cpgs38<-hg19to38(cpgs[,.(chr,pos,pos,cpg_id)][order(chr,pos)])
-cpgs38[,cpg_id:=id]
-cpgs38[,pos:=start]
-res_cpgs<-merge(res_meth[,.(cpg_id,logFC,AveExpr,P.Value,adj.P.Val)],unique(cpgs38[,.(cpg_id,chr,pos)]))
-res_cpgs[is.na(pos)] #ok
-fwrite(res_cpgs,fp(out,"res_cpgs_hg38.cs.gz"))
-res_cpgs<-fread(fp(out,"res_cpgs_hg38.cs.gz"))
-
-cpgs_in_ocrs<-bed_inter(res_cpgs[,start:=pos][,end:=pos+1][,.(chr,start,end,cpg_id)][order(chr,start)],
-          ocrs[,.(chr,start,end,peaks)],
-          select = c(4,1,2,8,6,7),col.names = c("cpg_id","chr","pos","peaks","start","end"))
-
-length(unique(cpgs_in_ocrs$cpg_id))#300k/750k
-fwrite(cpgs_in_ocrs,fp(out,"cpgs_in_bulk_OCRs.csv.gz"))
-cpgs_in_ocrs<-fread(fp(out,"cpgs_in_bulk_OCRs.csv.gz"))
-
-res_cpgs_ocrs<-merge(res_meth[,.(cpg_id,logFC,AveExpr,P.Value,adj.P.Val)],cpgs_in_ocrs)
-
-res_cpgs_ocrs[P.Value<0.001&abs(logFC)>25] #3910
-fwrite(res_cpgs_ocrs,fp(out,"res_meth_in_bulk_OCRs.csv.gz"))
-res_cpgs_ocrs<-fread(fp(out,"res_meth_in_bulk_OCRs.csv.gz"))
-fwrite(res_cpgs_ocrs[P.Value<0.001&abs(logFC)>25],fp(out,"DMCs_in_bulk_OCRs.csv.gz"))
-res_meth[P.Value<0.001&abs(logFC)>25] #3910 / 4815 DMCs
-
-#QC 
-#n DMCs / peaks
-res_cpgs_ocrs[,dmc:=P.Value<0.001&abs(logFC)>25]
-res_cpgs_ocrs[,count:=.N,by=.(dmc,peaks)]
-ggplot(res_cpgs_ocrs)+geom_density(aes(x=count,fill=dmc))
-
-ggplot(res_cpgs_ocrs[dmc==T])+geom_histogram(aes(x=count),bins=7,col="white")
-
-res_cpgs_ocrs[,peak_size:=end-start]
-ggplot(res_cpgs_ocrs)+geom_density(aes(peak_size))
-
-#DMCs peaks in 4/6 regions ?
-res_cpgs_ocrs_anno<-merge(res_cpgs_ocrs,peaks_chrine[,.(peaks,chrine_feat)],allow.cartesian=T)
-ggplot(res_cpgs_ocrs_anno)+geom_bar(aes(x=dmc,fill=chrine_feat),position = "fill")+scale_y_continuous(labels = scales::percent)
-
-#DMCs close TSS ?
-cpgs_in_peaks<-unique(res_cpgs_ocrs$cpg_id)
-dmcs_in_peaks<-unique(res_cpgs_ocrs[dmc==T]$cpg_id)
-
-cpgs_anno<-fread("outputs/02A-CpGs_annotations/cpgs_annot.csv.gz")
-cpgs_anno_tss<-cpgs_anno[in_eQTR==F]
-cpgs_anno_tss[,in_peaks:=cpg_id%in%cpgs_in_peaks]
-cpgs_anno_tss[,dmc:=cpg_id%in%res_meth[P.Value<0.001&abs(logFC)>25]$cpg_id]
-cpgs_anno_tss[,dmc_in_peaks:=dmc&in_peaks]
-p1<-ggplot(cpgs_anno_tss)+geom_density(aes(x=tss_dist))+ggtitle("all cpgs")
-p2<-ggplot(cpgs_anno_tss[in_peaks==T])+geom_density(aes(x=tss_dist))+ggtitle("cpgs in peaks")
-p3<-ggplot(cpgs_anno_tss[dmc==T])+geom_density(aes(x=tss_dist))+ggtitle("DMCs")
-p4<-ggplot(cpgs_anno_tss[dmc_in_peaks==T])+geom_density(aes(x=tss_dist))+ggtitle("DMCs in peaks")
-(p1+p2)/(p3+p4)
-cpgs_anno_tss[,cpg_type:=ifelse(dmc_in_peaks==T,"DMC in peak",ifelse(in_peaks==T,"CpG in peak",ifelse(dmc==T,"DMC not in peak","CpG not in peak")))]
-ggplot(cpgs_anno_tss)+geom_density(aes(x=log10(abs(tss_dist)+1),fill=cpg_type))+facet_wrap("cpg_type")
-ggplot(cpgs_anno_tss)+geom_density(aes(x=abs(tss_dist)+1,fill=cpg_type))+facet_wrap("cpg_type")+scale_x_log10()
-
-#2) TF motif enrichment in this peaks
-#renv::install("bioc::JASPAR2020")
-#renv::install("bioc::TFBSTools")
-
-library(JASPAR2020)
-library(TFBSTools)
-
-#renv::install("bioc::BSgenome.Hsapiens.UCSC.hg38")
-#renv::install("bioc::motifmatchr")
-
-library(BSgenome.Hsapiens.UCSC.hg38)
-
-# Get a list of motif position frequency matrices from the JASPAR database
-#?getMatrixSet
-pfm <- getMatrixSet(
-  x = JASPAR2020,
-  opts = list(species = "Homo sapiens", all_versions = FALSE)
-)
-
-# add motif information
-#?AddMotifs
-atacs <- AddMotifs(
-  object = atacs,
-  genome = BSgenome.Hsapiens.UCSC.hg38,
-  pfm = pfm
-)
-
-peaks_with_dmcs<-unique(res_cpgs_ocrs[P.Value<0.001&abs(logFC)>25]$peaks)
-peaks_without<-unique(res_cpgs_ocrs[!peaks%in%peaks_with_dmcs]$peaks)
-enriched.motifs <- FindMotifs(
-  object = atacs,
-  features = peaks_with_dmcs ,
-  background=peaks_without)
-
-
-enriched.motifs<-data.table(enriched.motifs)
-fwrite(enriched.motifs,fp(out,"enriched_motifs_in_CpGs_overlaping_OCRs_with_DMCs_vs_without.csv"))
-enriched.motifs<-fread(fp(out,"enriched_motifs_in_CpGs_overlaping_OCRs_with_DMCs_vs_without.csv"))
-head(enriched.motifs,25)
-enriched.motifs[pvalue<0.000001]$motif.name
-enriched.motifs[,motif.name:=factor(motif.name,levels=enriched.motifs[order(pvalue)]$motif.name)]
-
-ggplot(enriched.motifs[order(pvalue)][1:25])+
-  geom_point(aes(x=motif.name,size=fold.enrichment,y=observed,col=-log10(pvalue+10^-316)))
-
-MotifPlot(
-  object = atacs,
-  motifs = head(enriched.motifs$motif)
-)
-
-
-#3) Downregulated genes enriched for EGR1 + methylated HSC peaks ? compared to EGR1 peaks, methylated peaks
-#get EGR1 peaks and closest genes 
-motif.all <- GetMotifData(
-    object = atacs, assay = "ATAC", slot = "data"
-  )
-enriched.motifs<-fread(fp(out,"enriched_motifs_in_CpGs_overlaping_OCRs_with_DMCs_vs_without.csv"))
-
-egr1_peaks<-motif.all[,enriched.motifs[motif.name=="EGR1"]$motif,drop=F]
-#sum(egr1_peaks>1)
-egr1_peaks<-rownames(egr1_peaks)[as.vector(egr1_peaks==1)]
-length(egr1_peaks) #22k
-egr1_genes_dt<-data.table(ClosestFeature(atacs,regions = egr1_peaks))
-fwrite(egr1_genes_dt,fp(out,"genes_of_egr1_containing_bulk_peaks.csv.gz"))
-egr1_genes<-unique(egr1_genes_dt$gene_name)
-length(egr1_genes) #13k
-
-#get methylated peaks
-dmcs_ocrs<-fread(fp(out,"DMCs_in_bulk_OCRs.csv.gz"))
-dmcs_peaks<-unique(dmcs_ocrs$peaks)
-length(dmcs_peaks) #3170
-dmcs_genes_dt<-data.table(ClosestFeature(atacs,regions = dmcs_peaks))
-fwrite(dmcs_genes_dt,fp(out,"genes_of_dmcs_containing_bulk_peaks.csv.gz"))
-dmcs_genes<-unique(dmcs_genes_dt$gene_name)
-length(dmcs_genes) #2854
-
-
-#EGR1 + methylated peaks/genes
-egr1_dmcs_peaks<-intersect(egr1_peaks,dmcs_peaks)
-length(egr1_dmcs_peaks) #2363
-
-egr1_dmcs_genes<-intersect(egr1_genes,dmcs_genes)
-length(egr1_dmcs_genes) #2494
-
-#downregulated genes enriched for genes close to egr1 dmcs peaks ?
-
-res_degs<-fread("outputs/09-LGA_vs_Ctrl_Activated/res_pseudobulkDESeq2_by_lineage.csv.gz")
-degs_list<-list(degs=res_degs[lineage=="HSC"&padj<0.05&abs(log2FoldChange)>0]$gene,
-                down=res_degs[lineage=="HSC"&padj<0.05&log2FoldChange<(-0.5)]$gene,
-                up=res_degs[lineage=="HSC"&padj<0.05&log2FoldChange>0.5]$gene)
-
-egr1_met_list<-list(egr1=egr1_genes,
-                meth=dmcs_genes,
-                egr1_meth=egr1_dmcs_genes)
-
-res_or<-OR3(degs_list,egr1_met_list,background = unique(res_degs$gene)) 
-fwrite(res_or,fp(out,"res_degs_enrichment_for_egr1_and_or_dmcs_peaks.csv"))
-
-res_or<-fread(fp(out,"res_degs_enrichment_for_egr1_and_or_dmcs_peaks.csv"))
-ggplot(res_or[,.SD,.SDcols=-ncol(res_or)])+geom_point(aes(x=term,y=-log10(pval),size=n.overlap,col=pct.term.overlap))+facet_wrap("query")
-
-
-length(intersect(egr1_genes,res_degs$gene))
-length(unique(res_degs$gene))#8k/13k ac EGR1 motif
-
-#down of the EGRN enriched for egr1 dmcs peaks ?
-egrn<-fread("outputs/13-GRN_integr/egr1_network_tf_target_interactions.csv")
-egrn_genes<-unique(egrn$target)
-length(egrn_genes) #208
-degs_egrn_list<-lapply(degs_list, function(x)intersect(x,egrn_genes))
-# $degs
-#  [1] "ATP1B1"  "DUSP2"   "IER5"    "ABHD5"   "MAP9"    "TNFAIP3" "EGR1"    "CDKN1A"  "DNAJB9" 
-# [10] "IER3"    "BRD2"    "HSPA1B"  "HSPA1A"  "DNAJA1"  "GADD45G" "NFKBIA"  "UBL3"    "PNP"    
-# [19] "ARIH1"   "SOCS3"   "HEXIM1"  "GADD45B" "ID1"     "KLF2"    "ZFP36"   "NFATC1"  "DNAJB1" 
-# [28] "IER2"    "SERTAD3" "JUNB"    "MYADM"   "TOB2"   
-# 
-# $down
-#  [1] "ATP1B1"  "DUSP2"   "IER5"    "ABHD5"   "MAP9"    "TNFAIP3" "EGR1"    "CDKN1A"  "DNAJB9" 
-# [10] "IER3"    "BRD2"    "HSPA1B"  "HSPA1A"  "DNAJA1"  "GADD45G" "NFKBIA"  "UBL3"    "PNP"    
-# [19] "ARIH1"   "SOCS3"   "HEXIM1"  "GADD45B" "ID1"     "KLF2"    "ZFP36"   "NFATC1"  "DNAJB1" 
-# [28] "IER2"    "SERTAD3" "JUNB"    "MYADM"   "TOB2"   
-# 
-# $up
-# character(0)
-
-
-res_or2<-OR3(degs_egrn_list,egr1_met_list,background = unique(res_degs$gene)) 
-fwrite(res_or2,fp(out,"res_egrn_degs_enrichment_for_egr1_and_or_dmcs_peaks.csv"))
-res_or2<-fread(fp(out,"res_egrn_degs_enrichment_for_egr1_and_or_dmcs_peaks.csv"))
-
-ggplot(res_or2[,.SD,.SDcols=-ncol(res_or2)])+geom_point(aes(x=term,y=-log10(pval),size=n.overlap,col=pct.term.overlap))+facet_wrap("query")
-res_orm<-rbind(res_or[,.SD,.SDcols=-ncol(res_or)][,genes:="All DEGs"],res_or2[,.SD,.SDcols=-ncol(res_or2)][,genes:="DEGs of the EGR1 network"])
-ggplot(res_orm)+geom_point(aes(x=term,y=-log10(pval),size=n.overlap,col=pct.term.overlap))+facet_grid(genes~query)
-
-
-# peaks methylé with EGR1/KLF2/KLF4/.. motif close to which genes? 
-#for EGR1
-dmcs_ocrs<-fread(fp(out,"DMCs_in_bulk_OCRs.csv.gz"))
-enriched.motifs<-fread(fp(out,"enriched_motifs_in_CpGs_overlaping_OCRs_with_DMCs_vs_without.csv"))
-
-peaks_dmcs<-unique(dmcs_ocrs$peaks)
-
-motif.all <- GetMotifData(
-    object = atacs, assay = "ATAC", slot = "data"
-  )
-motifs_dmcs <- motif.all[peaks_dmcs, , drop = FALSE]
-
-egr1_motif_dmcs<-motifs_dmcs[,enriched.motifs[motif.name=="EGR1"]$motif,drop=F]
-peaks_dmcs_egr1<-rownames(egr1_motif_dmcs)[as.vector(egr1_motif_dmcs==1)]
-length(peaks_dmcs_egr1) #2363
-df_genes_dmcs_egr1<-ClosestFeature(atacs,regions = peaks_dmcs_egr1)
-genes_dmcs_egr1<-unique(df_genes_dmcs_egr1$gene_name)
-length(genes_dmcs_egr1) #2222
-
-#for all
-genes_close_tf_meth<-Reduce(rbind,lapply(c("EGR1","KLF2","KLF4"),function(x){
-  tf_motif_dmcs<-motifs_dmcs[,enriched.motifs[motif.name==x]$motif,drop=F]
-  peaks_dmcs_tf<-rownames(tf_motif_dmcs)[as.vector(tf_motif_dmcs==1)]
-  dt_genes_dmcs_tf<-data.table(ClosestFeature(atacs,regions = peaks_dmcs_tf))
-  dt_genes_dmcs_tf[,n.gene:=length(unique(gene_id))]
-  dt_genes_dmcs_tf[,dmc_region:=T]
-  return(dt_genes_dmcs_tf[,tf.motif:=x])
-  
-  }))
-fwrite(genes_close_tf_meth,fp(out,"res_closest_genes_tfmotif_dmcs_ocr.csv"))
-genes_close_tf_meth<-fread(fp(out,"res_closest_genes_tfmotif_dmcs_ocr.csv"))
-
-
-# genes of the EGRN ?  genes Downregulé ? Genes of the EGRN downregules ?
-tftargets<-fread("outputs/13-GRN_integr/tf_target_interactions.csv")
-EGRn<-fread("outputs/13-GRN_integr/egr1_network_tf_target_interactions.csv")
-res_degs<-fread("outputs/09-LGA_vs_Ctrl_Activated/res_pseudobulkDESeq2_by_lineage.csv.gz")
-
-trs_list<-list(EGRN_target=unique(EGRn$target),
-               EGR1_target=EGRn[tf=="EGR1"]$target,
-               KLF4_target=EGRn[tf=="KLF4"]$target,
-               KLF2_target=EGRn[tf=="KLF2"]$target)
-
-trs_de_list<-lapply(trs_list,function(x)intersect(x,res_degs[lineage=="HSC"&padj<0.05&abs(log2FoldChange)>0.5]$gene))
-names(trs_de_list)<-paste0(names(trs_list),"_degs")
-
-trs_dn_list<-lapply(trs_list,function(x)intersect(x,res_degs[lineage=="HSC"&padj<0.05&log2FoldChange<(-0.5)]$gene))
-names(trs_dn_list)<-paste0(names(trs_list),"_down")
-
-degs_list<-list(degs=res_degs[lineage=="HSC"&padj<0.05&abs(log2FoldChange)>0.5]$gene,
-                down=res_degs[lineage=="HSC"&padj<0.05&log2FoldChange<(-0.5)]$gene,
-                up=res_degs[lineage=="HSC"&padj<0.05&log2FoldChange>0.5]$gene)
-all_trs_list<-c(trs_list,trs_de_list,trs_dn_list,degs_list)
-
-genes_list<-split(genes_close_tf_meth$gene_name,genes_close_tf_meth$tf.motif)
-genes_list<-lapply(genes_list, unique)
-
-res_or_trs<-OR3(all_trs_list,genes_list,background = unique(res_degs$gene)) 
-res_or_trs[padj<0.05]
-#          query term term.size n.query n.overlap pct.query.overlap precision pct.term.overlap background_size pct.term.background
-# 1: KLF2_target EGR1      1433      98        18         0.1836735 0.1836735       0.01256106           12877           0.1112837
-# 2: KLF2_target KLF2      1479      98        18         0.1836735 0.1836735       0.01217039           12877           0.1148559
-# 3: KLF2_target KLF4      1598      98        19         0.1938776 0.1938776       0.01188986           12877           0.1240972
-# 4:        down EGR1      1433     285        44         0.1543860 0.1543860       0.03070482           12877           0.1112837
-#          pval       padj
-# 1: 0.02198625 0.03104840
-# 2: 0.02915675 0.03104840
-# 3: 0.03104840 0.03104840
-# 4: 0.01523962 0.04571885
-#                                                                                                                                                                                                                                                                                        genes.overlap
-# 1:                                                                                                                                                                                      AHNAK|ATF3|CD151|DDIT4|ETS1|HEXIM1|ID3|INTS6|KLF13|PTGER4|SOCS3|TINAGL1|TOB1|TRIM8|TSC22D1|UBC|ZFP36L1|IFRD1
-# 2:                                                                                                                                                                                      AHNAK|ATF3|CD151|DDIT4|ETS1|HEXIM1|ID3|INTS6|KLF13|PTGER4|SOCS3|TINAGL1|TOB1|TRIM8|TSC22D1|UBC|ZFP36L1|IFRD1
-# 3:                                                                                                                                                                              AHNAK|ATF3|CD151|DDIT4|ETS1|HEXIM1|ID3|INTS6|KLF13|PTGER4|SERTAD1|SOCS3|TINAGL1|TOB1|TRIM8|TSC22D1|UBC|ZFP36L1|IFRD1
-# 4: C1orf109|TAF5L|ATP1B1|EFNA3|BEND5|IER5|LUZP1|IFFO2|SLC30A1|PLK3|SEMA4A|FAM43A|BAMBI|RPP38|SLC3A2|STIP1|C2CD2L|PHLDA2|C11orf96|CRY1|UBE2D1|NFKBIA|BRMS1L|EFNB2|RAB3IP|GCH1|DUSP5|JDP2|TAF5|PPRC1|BAG3|IKBIP|TNFRSF12A|PLEKHH3|CFAP20|DERL2|PSMC3IP|CYP1A1|SPATA2L|ATP6V0D1|SOCS3|HEXIM1|TOP1|H2AFX
-#          query
-# 1: KLF2_target
-# 2: KLF2_target
-# 3: KLF2_target
-# 4:        down
-
-ggplot(res_or_trs[,.SD,.SDcols=-ncol(res_or_trs)])+geom_point(aes(x=term,y=-log10(pval),size=n.overlap,col=pct.term.overlap))+facet_wrap("query")
-
-fwrite(res_or_trs,fp(out,"res_trs_network_enrichment_for_closest_genes_of_dmcs_containing_tf_bulk_ocrs.csv"))
-res_or_trs<-fread(fp(out,"res_trs_network_enrichment_for_closest_genes_of_dmcs_containing_tf_bulk_ocrs.csv"))
-res_or_trs[padj<0.1]
-
-
-#II) ANalysis by lineage####
-
-#1) need first annotate cells ~ lineage hmap
-#renv::install("harmony")
+#2) annot atac cells with the hematomap####
 library(harmony)
 DefaultAssay(atacs)<-"ATAC"
 atacs <- RunHarmony(
@@ -375,13 +56,13 @@ saveRDS(atacs,fp(out,"cbps_atacs.rds"))
 
 VlnPlot(atacs,"prediction.score.max",group.by="predicted.id")
 
-#2) compute lin OCRs
+#3) compute lin OCRs ####
 atacs<-readRDS(fp(out,"cbps_atacs.rds"))
 #need macs2
 
 renv::use_python()
 #reticulate::install_miniconda()
-reticulate::use_miniconda()
+#reticulate::use_miniconda()
 reticulate::py_install(packages ="MACS2")
 
 peaks <- CallPeaks(
@@ -411,19 +92,7 @@ table(peaks_dt2[n.lin==1]$lineage)
 fwrite(peaks_dt2,fp(out,"cbps_atacs_peaks_by_lineage2.csv.gz"))
 peaks_dt2<-fread(fp(out,"cbps_atacs_peaks_by_lineage2.csv.gz"))
 
-#3) cpgs overlapping peaks
-cpgs_in_ocrs_lin<-bed_inter(res_cpgs[,start:=pos][,end:=pos+1][,.(chr,start,end,cpg_id)][order(chr,start)],
-          peaks_dt[,.(chr,start,end,peaks)][order(chr,start)],
-          select = c(4,1,2,8,6,7),col.names = c("cpg_id","chr","pos","peaks","start","end"))
-
-length(unique(cpgs_in_ocrs_lin$cpg_id))#275k/750k cpgs
-length(unique(cpgs_in_ocrs_lin$peaks)) #66k/215k peaks
-
-fwrite(cpgs_in_ocrs_lin,fp(out,"cpgs_in_lin_OCRs.csv.gz"))
-
-
-#4) linspe OCRs (findmarkers)
-#   a) new assays
+#   create new assay
 peaks<-readRDS(fp(out,"cbps_atacs_peaks_by_lineage.rds"))
 peaks_mat<-FeatureMatrix(Fragments(atacs),
                              features =peaks,
@@ -436,7 +105,8 @@ atacs[["lin_peaks"]]<-CreateChromatinAssay(peaks_mat)
 saveRDS(atacs@assays$lin_peaks,fp(out,"cbps_lin_spe_peaks_assay.rds"))
 
 
-#   b) findallmarkers
+# linspe OCRs (findmarkers)
+#  findallmarkers
 DefaultAssay(atacs)<-"lin_peaks"
 Idents(atacs)<-"predicted.id"
 peaks_lin<-FindAllMarkers(atacs,
@@ -452,7 +122,37 @@ table(peaks_lin[p_val_adj<0.001]$cluster)
 fwrite(peaks_lin,fp(out,"peaks_markers_lineage.csv.gz"))
 peaks_lin<-fread(fp(out,"peaks_markers_lineage.csv.gz"))
 
-#  c) DMCs enrichemnt for HSC spec peaks ?
+
+
+#4) INTEGRATION WITH METHYL DATA ####
+#cpgs overlapping peaks
+cpgs_in_ocrs_lin<-bed_inter(res_cpgs[,start:=pos][,end:=pos+1][,.(chr,start,end,cpg_id)][order(chr,start)],
+          peaks_dt[,.(chr,start,end,peaks)][order(chr,start)],
+          select = c(4,1,2,8,6,7),col.names = c("cpg_id","chr","pos","peaks","start","end"))
+
+length(unique(cpgs_in_ocrs_lin$cpg_id))#275k/750k cpgs
+length(unique(cpgs_in_ocrs_lin$peaks)) #66k/215k peaks
+
+fwrite(cpgs_in_ocrs_lin,fp(out,"cpgs_in_lin_OCRs.csv.gz"))
+
+#% DMCs overlapping linOCR
+cpgs_in_ocrs_lin<-fread(fp(out,"cpgs_in_lin_OCRs.csv.gz"))
+res_meth<-fread("outputs/01-lga_vs_ctrl_limma_DMCs_analysis/res_limma.tsv.gz")
+
+peaks_meth<-merge(cpgs_in_ocrs_lin,res_meth,by="cpg_id")
+nrow(peaks_meth[P.Value<0.001&abs(logFC)>25])/nrow(res_meth[P.Value<0.001&abs(logFC)>25]) #74%
+
+#vs % CpGs overlapping 
+nrow(peaks_meth)/nrow(res_meth) #36%
+
+(nrow(peaks_meth[P.Value<0.001&abs(logFC)>25])/nrow(res_meth[P.Value<0.001&abs(logFC)>25]))/(nrow(peaks_meth)/nrow(res_meth)) #2 foldenrichment
+
+
+OR(set1 = res_meth[P.Value<0.001&abs(logFC)>25]$cpg_id,
+   set2= peaks_meth$cpg_id,size_universe = nrow(res_meth))
+
+
+# DMCs enrichemnt for HSC spec peaks ?
 cpgs_in_ocrs_lin<-fread(fp(out,"cpgs_in_lin_OCRs.csv.gz"))
 length(unique(cpgs_in_ocrs_lin$peaks))
 res_meth<-fread("outputs/01-lga_vs_ctrl_limma_DMCs_analysis/res_limma.tsv.gz")
@@ -568,6 +268,8 @@ peaks_hsc_dmcs<-intersect(peaks_dmcs,lin_spe_peaks$HSC)
 peaks_hsc_dmcs_anno<-ClosestFeature(atacs,peaks_hsc_dmcs)
 peaks_hsc_dmcs_anno$gene_name
 fwrite(peaks_hsc_dmcs_anno,fp(out,"anno_hsc_dmcs_peaks.csv"))
+
+
 
 #  d) EGR1 enrichment in HSC spec peaks ?
 # Get a list of motif position frequency matrices from the JASPAR database
@@ -711,7 +413,7 @@ length(dmcs_egr1_hsc_peaks) #2106
 
 
 
-# DEGs integr####
+# 5) INTEGRATION WITH EXPRESSION DATA ####
 # peaks containing DMCs enriched for DEGs ? peaks with EGR1/KLF2/KLF4 ? peaks with EGR1/KLF2/KLF4+DMCs ? 
 #peaks_genes_anno
 atacs<-readRDS("outputs/14-DMCs_atac_integr/cbps_atacs.rds")
@@ -835,3 +537,51 @@ fwrite(res_or_degs_dmcs_tf_genes,fp(out,"res_degs_enrichment_in_dmcs_tf_hsc_gene
 res_or_degs_dmcs_tf_genes[padj<0.05] #not sig
 
 
+#GO analysis of HSC peaks containing DMCs
+library(clusterProfiler)
+library(enrichplot)
+library(org.Hs.eg.db)
+peaks_hsc_genes<-fread(fp(out,"peaks_hsc_genes_anno.csv.gz"))
+
+cpgs_in_ocrs_lin<-fread(fp(out,"cpgs_in_lin_OCRs.csv.gz"))
+res_meth<-fread("outputs/01-lga_vs_ctrl_limma_DMCs_analysis/res_limma.tsv.gz")
+res_meth[P.Value<0.001&abs(logFC)>25]
+peaks_meth<-merge(cpgs_in_ocrs_lin,res_meth,by="cpg_id")
+peaks_hsc_genes[,peaks:=query_region]
+peaks_hsc_genes_meth<-merge(peaks_hsc_genes,peaks_meth,by="peaks")
+unique(peaks_hsc_genes_meth[P.Value<0.001&abs(logFC)>25]$gene_name)
+
+res_go_bp<-enrichGO(bitr(unique(peaks_hsc_genes_meth[P.Value<0.001&abs(logFC)>25]$gene_name),
+                         fromType = "SYMBOL",
+                             toType = "ENTREZID",OrgDb = org.Hs.eg.db)$ENTREZID,ont = "BP",
+                 OrgDb = org.Hs.eg.db,pvalueCutoff = 1,qvalueCutoff = 1,maxGSSize = 800,
+                 universe =bitr(unique(peaks_hsc_genes_meth$gene_name),fromType = "SYMBOL",
+                             toType = "ENTREZID",OrgDb = org.Hs.eg.db)$ENTREZID)
+
+res_go_dt<-data.table(as.data.frame(res_go_bp))
+res_go_dt[p.adjust<0.05]#36
+res_go_dt[p.adjust<0.1]$Description
+emapplot(pairwise_termsim(res_go_bp),showCategory = 36,cex_label_category=0.66)
+res_go_dt[Description=="negative regulation of growth"]
+res_go_dt[Description=="regulation of growth"] #nop
+saveRDS(res_go_bp,fp(out,"res_go_bp_dmcs_hsc_peaks.rds"))
+fwrite(res_go_dt,fp(out,"res_go_bp_dmcs_hsc_peaks.csv.gz"))
+
+#gsego
+
+peaks_hsc_genes_meth[P.Value<0.001&abs(logFC)>25,dmcscore.peak:=max(-log10(P.Value)*abs(logFC)),by=.(peaks)]
+peaks_hsc_genes_meth[P.Value<0.001&abs(logFC)>25,dmcscore.gene:=mean(dmcscore.peak),by=.(gene_name)]
+res_dt1<-merge(peaks_hsc_genes_meth,
+              data.table(bitr(unique(peaks_hsc_genes_meth$gene_name),fromType = "SYMBOL",toType = "ENTREZID",OrgDb = org.Hs.eg.db,drop=F))[,gene_name:=SYMBOL],by="gene_name")[!is.na(ENTREZID)]
+genelist<-unique(res_dt1[!is.na(dmcscore.gene)][order(-dmcscore.gene)],by="ENTREZID")$dmcscore.gene
+names(genelist)<-unique(res_dt1[!is.na(dmcscore.gene)][order(-dmcscore.gene)],by="ENTREZID")$ENTREZID
+
+res_gsea_go<- gseGO(geneList     =genelist , 
+                    ont="BP",
+                    exponent = 1,
+                        minGSSize    = 10,maxGSSize = 500,
+                        pvalueCutoff = 1,
+                        eps = 0,scoreType="pos",
+                        OrgDb = org.Hs.eg.db)
+res_go_dt<-data.table(as.data.frame(res_gsea_go))
+res_go_dt[p.adjust<0.05]#0

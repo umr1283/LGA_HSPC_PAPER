@@ -4,11 +4,11 @@ library(Seurat)
 #renv::install("Signac")
 library(Signac)
 
-out<-"outputs/15-chromatin_change_LGA_vs_Ctrl"
+out<-"outputs/08-chromatin_change_LGA_vs_Ctrl"
 dir.create(out)
-atacs<-readRDS("outputs/14-DMCs_atac_integr/cbps_atacs.rds")
-atacs[["lin_peaks"]]<-readRDS("outputs/14-DMCs_atac_integr/cbps_lin_spe_peaks_assay.rds")
-atacs@assays$lin_peaks@motifs<-readRDS("outputs/14-DMCs_atac_integr/atacs_cbps_lin_peaks_motif_object.rds")
+atacs<-readRDS("outputs/7-DMCs_atac_integr/cbps_atacs.rds")
+atacs[["lin_peaks"]]<-readRDS("outputs/7-DMCs_atac_integr/cbps_lin_spe_peaks_assay.rds")
+atacs@assays$lin_peaks@motifs<-readRDS("outputs/7-DMCs_atac_integr/atacs_cbps_lin_peaks_motif_object.rds")
 
 DefaultAssay(atacs)<-"lin_peaks"
 

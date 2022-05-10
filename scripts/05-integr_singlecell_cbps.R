@@ -1,5 +1,5 @@
 #integr CBPs datasets thanks to hematomap
-out<-"outputs/06-integr_singlecell_cbps"
+out<-"outputs/05-integr_singlecell_cbps"
 dir.create(out)
 source("scripts/utils/new_utils.R")
 source("../singlecell/scripts/utils/HTO_utils.R")
@@ -311,6 +311,7 @@ cbp8_qc_s<-subset(cbp8_qc,HTO_classification.global=="Singlet")
 
 cbp8_qc_s$sample<-cbp8_qc_s$hash.ID
 saveRDS(cbp8_qc_s,fp(out,"cbp8.rds"))
+
 
 
 #cbp0_ctrl####
@@ -706,7 +707,7 @@ source("../methyl/scripts/utils/new_utils.R")
 library(Seurat)
 library(parallel)
 
-hmap<-readRDS("outputs/05-make_hematomap/hematomap_ctrls_sans_stress.rds")
+hmap<-readRDS("outputs/04-make_hematomap/hematomap_ctrls_sans_stress.rds")
 hmap
 DefaultAssay(hmap)<-"integrated"
 hmap[["pca.annoy.neighbors"]] <- LoadAnnoyIndex(object = hmap[["pca.annoy.neighbors"]], file = "outputs/05-make_hematomap/reftmp.idx")
@@ -716,7 +717,7 @@ cbps_run<-c("cbp0_ctrl","cbp0_lga",
             ps("cbp6",c("a","b","c")),ps("cbp7",c("a","b","c")),
             "cbp8")
 length(cbps_run)#12
-  
+
 cbps_list<-lapply(cbps_run, function(run)readRDS(fp(out,ps(run,".rds"))))
 cbps_list
 
@@ -801,62 +802,33 @@ DimPlot(cbps, group.by = 'lineage_hmap',reduction = "denovo.umap", label = TRUE)
 
 saveRDS(cbps,fp(out,"cbps.rds"))
 
-cbps<-readRDS("outputs/06-integr_singlecell_cbps/cbps.rds")
 
 ####CHECK INTEGR OK####
-cbps_f<-subset(cbps,lineage_hmap!="18"&ambigous==F&group!="iugr")
+cbps_f<-subset(cbps,lineage_hmap!="18"&ambigous==F&group!="iugr"&hto==T)
 rm(cbps)
 
 #check qu'on a bien tout
 
 #all
-cbps_f#47995 cells
-length(unique(cbps_f$sample_hto)) #27 samples_conditions
-length(unique(cbps_f$sample)) #23 samples
+cbps_f# 12685 cells
+length(unique(cbps_f$sample)) #14 samples
 
 #n samples by group
 mtd<-data.table(cbps_f@meta.data,keep.rownames = "bc")
 mts<-unique(mtd,by=c("sample_hto"))
 table(mts$hto,mts$group)
   #       ctrl  lga
-  # FALSE    7   6
   # TRUE     8   6
 
 #n of cells
 table(mtd$hto,mtd$group)
   #       ctrl   lga
-  # FALSE 18520 16791
   # TRUE   5823  6861
 
 #n of HSC 
 table(mtd[lineage_hmap=="HSC"]$hto,mtd[lineage_hmap=="HSC"]$group)
   #      ctrl  lga
-  # FALSE 3485 4200
-  # TRUE  2093 1959
-
-#check subpop distr
-mtd$lineage_hmap<-factor(mtd$lineage_hmap,levels = c("LT-HSC","HSC","MPP/LMPP","Lymphoid","B cell","T cell","Erythro-Mas","Mk/Er","Myeloid","DC"))
-
-ggplot(mtd)+geom_bar(aes(x=sample_hto,fill=lineage_hmap),position = "fill")
-mtd[,n.sample:=.N,by="sample_hto"]
-mtd[,pct.lin:=.N/n.sample,by=c("sample_hto","lineage_hmap")]
-ggplot(unique(mtd,by=c("sample_hto","lineage_hmap")))+geom_boxplot(aes(x=hto,y=pct.lin,fill=group))+facet_wrap("lineage_hmap",scales = "free")
-
-mtd[,pct.ct:=.N/n.sample,by=c("sample_hto","cell_type_hmap")]
-ggplot(unique(mtd,by=c("sample_hto","cell_type_hmap")))+geom_boxplot(aes(x=hto,y=pct.ct,fill=group))+facet_wrap("cell_type_hmap",scales = "free")
-
-unique(mtd[group=="ctrl"&pct.lin<0.1&lineage_hmap=="HSC"],by="sample_hto")
-
-ggplot(mtd[sample%in%c("ctrlM555","ctrlM518","ctrlM537")])+
-  geom_bar(aes(x=hto,fill=lineage_hmap),position = "fill")+
-  facet_wrap("sample",scales = "free")
-table(mtd[sample=="ctrlM537",.(lineage_hmap,hto)])
-
-fwrite(mtd,fp(out,"metadata_cbps_filtered.csv.gz"))
-
-mtd[,toy_data:=bc%in%sample(bc,ceiling(.N/10)),.(sample_hto,lineage_hmap)]
-mtd[toy_data==T]
-saveRDS(cbps_f[,mtd[toy_data==T]$bc],fp(out,"cbps_4k.rds"))
+  # TRUE  2075 1903
 
 saveRDS(cbps_f,fp(out,"cbps_filtered.rds"))
 

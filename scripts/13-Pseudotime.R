@@ -3,8 +3,8 @@ source("scripts/utils/new_utils.R")
 out<-"12-Pseudotime"
 dir.create(out)
 
-#Pseudotime analysis on ref umap (hematomap) root= LT-HSC
-#run 12A
+#Pseudotime analysis on integrated datasets
+#run 13A
 
 cbps.cds<-readRDS(fp(out,"cbps.cds.rds"))
 plot_cells(
@@ -15,7 +15,7 @@ plot_cells(
   label_leaves=FALSE
 )
 
-cbps<-readRDS(file="outputs/12-Pseudotime/cbps_RNA_Pseudotime_ComputRoot.rds")
+cbps<-readRDS(file="outputs/13-Pseudotime/cbps_RNA_Pseudotime_ComputRoot.rds")
 
 cbps_inf<-subset(cbps,pseudo_time!=Inf)
 Idents(cbps_inf)<-"cell_type_hmap"

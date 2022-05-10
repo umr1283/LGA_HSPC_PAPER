@@ -4,9 +4,9 @@ set.seed(1234)
 old_path <- Sys.getenv("PATH")
 Sys.setenv(PATH = paste(old_path, "/home/apelletier/HSPC_EpiStress/Data/tools/homer/bin/", sep = ":"))
 
-out<-"outputs/03B-motif_analysis"
+out<-"outputs/10A-motif_analysis"
 dir.create(out)
-bed_path<-fp(out,"40bp_win_dmc_pvalnom0.001_meth.change30")
+bed_path<-fp(out,"40bp_win_dmc_pvalnom0.001_meth.change25")
 background_path<-fp(out,"random1_HOMER.bed")
 
 
@@ -20,12 +20,12 @@ res[,start:=pos-20][start<1,start:=1][,end:=pos+20]
 res<-res[!is.na(chr)&!is.na(pos)]
 
 
-# random_cpgs<-res[cpg_id%in%sample(cpg_id[!(P.Value<0.001&abs(logFC)>25)],50000),.(chr,start,end)][order(chr,start)]
-# 
-# 
-# fwrite(random_cpgs,
-#        background_path,sep="\t",
-#        col.names=F)
+random_cpgs<-res[cpg_id%in%sample(cpg_id[!(P.Value<0.001&abs(logFC)>25)],50000),.(chr,start,end)][order(chr,start)]
+
+
+fwrite(random_cpgs,
+        background_path,sep="\t",
+        col.names=F)
 
 n_cpgs<-nrow(res[P.Value<0.001&abs(logFC)>25]) #4815
 

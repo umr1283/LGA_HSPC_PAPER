@@ -1,5 +1,5 @@
 ### Project Setup ==================================================================================
-out<-"outputs/16-GRN_final"
+out<-"outputs/12-GRN_final"
 dir.create(out)
 source("scripts/utils/new_utils.R")
 library(Seurat)
@@ -47,15 +47,15 @@ CheckMotif<-function(object,peaks,motif.name,assay = NULL,return.peaks=FALSE){
 
 
 #clean regulons list based on atac
-regulons_list<-readRDS("../singlecell/outputs/05-SCENIC/cbps0-8_clean/regulons_list.rds")
+regulons_list<-readRDS("outputs/09-SCENIC/cbps_14k/regulons_list.rds")
 
-atacs<-readRDS("outputs/14-DMCs_atac_integr/cbps_atacs.rds")
-atacs[["lin_peaks"]]<-readRDS("outputs/14-DMCs_atac_integr/cbps_lin_spe_peaks_assay.rds")
-atacs@assays$lin_peaks@motifs<-readRDS("outputs/14-DMCs_atac_integr/atacs_cbps_lin_peaks_motif_object.rds")
+atacs<-readRDS("outputs/07-DMCs_atac_integr/cbps_atacs.rds")
+atacs[["lin_peaks"]]<-readRDS("outputs/07-DMCs_atac_integr/cbps_lin_spe_peaks_assay.rds")
+atacs@assays$lin_peaks@motifs<-readRDS("outputs/07-DMCs_atac_integr/atacs_cbps_lin_peaks_motif_object.rds")
 DefaultAssay(atacs)<-"lin_peaks"
 
 #for EGR1
-peaks_hsc_genes<-fread("outputs/14-DMCs_atac_integr/peaks_hsc_genes_anno.csv.gz")
+peaks_hsc_genes<-fread("outputs/07-DMCs_atac_integr/peaks_hsc_genes_anno.csv.gz")
 
 peaks_close_EGR1_target<-peaks_hsc_genes[gene_name%in%regulons_list$EGR1]$query_region
 egr1_peaks<-CheckMotif(atacs,
@@ -207,7 +207,7 @@ net_egr1 %v% "meth" = sapply(res_m[network.vertex.names(net_egr1),on="gene"]$met
 
 
 #add expr info 
-res_e<-fread("outputs/09-LGA_vs_Ctrl_Activated/res_pseudobulkDESeq2_by_lineage.csv.gz")[lineage=="HSC"]
+res_e<-fread("outputs/06-LGA_vs_Ctrl_RNA/res_pseudobulkDESeq2_by_lineage.csv.gz")[lineage=="HSC"]
 
 res_e[padj>0.05,deg:="cornsilk3"]
 res_e[padj<=0.05&log2FoldChange>0,deg:="coral2"]
@@ -221,7 +221,7 @@ net_egr1 %v% "deg" = res_e[network.vertex.names(net_egr1),on="gene"]$deg
 #add atac info 
 #on vertice
 #need add target info
-res_a<-fread("outputs/15-chromatin_change_LGA_vs_Ctrl/differential_peaks_accessibility_lga_vs_ctrl_hsc_logFC0.csv.gz")
+res_a<-fread("outputs/08-chromatin_change_LGA_vs_Ctrl/differential_peaks_accessibility_lga_vs_ctrl_hsc_logFC0.csv.gz")
 res_a<-res_a[!str_detect(peak,"chr[XY]")]
 peaks_hsc_genes[,peak:=query_region]
 res_at<-merge(res_a,peaks_hsc_genes,by="peak")
@@ -274,7 +274,7 @@ reg_egr1r1_peak1<-reg_egr1r1_peaks[(biggest_change)|is.na(biggest_change)]
 
 #add DMCs infos on edge
 #need merge peaks DMCs df with reg_egr1 df
-peaks_cpgs<-fread("outputs/14-DMCs_atac_integr/cpgs_in_lin_OCRs.csv.gz")
+peaks_cpgs<-fread("outputs/07-DMCs_atac_integr/cpgs_in_lin_OCRs.csv.gz")
 peaks_meth<-merge(peaks_cpgs,fread("outputs/01-lga_vs_ctrl_limma_DMCs_analysis/res_limma.tsv.gz"))
 peaks_meth[,peak:=peaks]
 peaks_meth_hsc<-peaks_meth[peak%in%peaks_hsc_genes$peak]

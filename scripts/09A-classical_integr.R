@@ -3,9 +3,9 @@ source("../methyl/scripts/utils/new_utils.R")
 library(Seurat)
 options(future.globals.maxSize = 50000 * 1024^2)
 sample_name<-"cbps0-8_clean"
-out<-"outputs/10A-classical_integr/"
+out<-"outputs/09A-classical_integr/"
 dir.create(out)
-cbps<-readRDS("outputs/06-integr_singlecell_cbps/cbps.rds")
+cbps<-readRDS("outputs/09-integr_singlecell_cbps/cbps.rds")
 DefaultAssay(cbps)<-"RNA"
 cbps_list<-SplitObject(cbps,split.by = "orig.ident")
 
