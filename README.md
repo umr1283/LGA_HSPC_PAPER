@@ -32,6 +32,7 @@ Analyses:
   2. [12-GRN_final.R](scripts/12-GRN_final.R)
 - In vitro analysis confirms the alteration of HSPCs differentiation capacities in LGA
   1. [13-Pseudotime.R](scripts/13-Pseudotime.R)
-  2. [14-figures_epi_response.R](scripts/14-figures_epi_response.R)
+  2. [14-RNA_velocity.R](scripts/14-RNA_velocity.R)
+  3. [15-figures_epi_response.R](scripts/15-figures_epi_response.R)
 
-Figures and statistical tests: [14-figures_epi_response.R](scripts/14-figures_epi_response.R)
+Figures and statistical tests: [15-figures_epi_response.R](scripts/15-figures_epi_response.R)
