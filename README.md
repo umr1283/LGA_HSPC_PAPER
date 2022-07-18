@@ -2,7 +2,7 @@
 
 [![DOI](https://zenodo.org/badge/404302229.svg)](https://zenodo.org/badge/latestdoi/404302229)
 
-This repository contains all scripts used to perform the analyses described in the manuscript entitled: "_**Early epigenetic influence on EGR1, KLF2 and KLF4 transcriptional network associates with alteration of HSCs quiescence**_" from Pelletier _et al._, 2021.
+This repository contains all scripts used to perform the analyses described in the manuscript entitled: "_**Epigenetic and Transcriptomic Programming of HSC Quiescence Signaling in Large for Gestational Age Neonates**_" from Pelletier _et al._, 2022 (doi: 10.3390/ijms23137323).
 
 Scripts were executed using the following Docker images stored on Docker Hub:
 
